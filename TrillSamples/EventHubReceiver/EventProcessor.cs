@@ -1,4 +1,4 @@
-﻿// *********************************************************************
+﻿    // *********************************************************************
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 // Licensed under the MIT License
 // *********************************************************************
@@ -48,7 +48,7 @@ namespace EventHubReceiver
         /// </summary>
         /// <param name="context"></param>
         /// <returns></returns>
-        public Task OpenAsync(PartitionContext context)
+        public async Task OpenAsync(PartitionContext context)
         {
             Config.ForceRowBasedExecution = true;
 
@@ -62,7 +62,7 @@ namespace EventHubReceiver
 
             var blockBlob = this.checkpointContainer.GetBlockBlobReference(
                 $"{context.Lease.PartitionId}-{context.Lease.SequenceNumber}");
-            if (blockBlob.Exists())
+            if (await blockBlob.ExistsAsync())
             {
                 Console.WriteLine($"Restoring query from EH checkpoint {context.Lease.SequenceNumber}");
                 var stream = blockBlob.OpenReadAsync().GetAwaiter().GetResult();
@@ -87,7 +87,6 @@ namespace EventHubReceiver
 
             Console.WriteLine($"SimpleEventProcessor initialized. Partition: '{context.PartitionId}', " +
                 $"Lease SeqNo: '{context.Lease.SequenceNumber}'");
-            return Task.CompletedTask;
         }
 
         /// <summary>
@@ -159,20 +158,34 @@ namespace EventHubReceiver
         /// </summary>
         /// <param name="checkpointFile"></param>
         /// <returns></returns>
-        private Task DeleteOlderCheckpoints(string checkpointFile)
+        private async Task DeleteOlderCheckpoints(string checkpointFile)
         {
             var storageAccount = CloudStorageAccount.Parse(StorageConnectionString);
             var blobClient = storageAccount.CreateCloudBlobClient();
             CloudBlobContainer container = blobClient.GetContainerReference("checkpoints");
-            foreach (var blob in container.ListBlobs())
+            BlobContinuationToken token = null;
+            while (true)
             {
-                if (((CloudBlockBlob)blob).Name != checkpointFile)
+                BlobResultSegment result = await container.ListBlobsSegmentedAsync(token);
+                var tasks = new List<Task>();
+                foreach (var blob in result.Results)
                 {
-                    ((CloudBlockBlob)blob).Delete();
+                    if (((CloudBlockBlob)blob).Name != checkpointFile)
+                    {
+                        tasks.Add(((CloudBlockBlob)blob).DeleteAsync());
+                    }
+                }
+                await Task.WhenAll(tasks);
+
+                if (result.ContinuationToken == null)
+                {
+                    break;
+                }
+                else
+                {
+                    token = result.ContinuationToken;
                 }
             }
-            this.checkpointStopWatch.Restart();
-            return Task.CompletedTask;
         }
     }
 }

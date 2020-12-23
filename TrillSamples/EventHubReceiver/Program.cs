@@ -11,14 +11,11 @@ namespace EventHubReceiver
 {
     public sealed class Program
     {
-        private const string EventHubConnectionString = "<fill>";
-        private const string EventHubName = "<fill>";
-        private const string StorageContainerName = "<fill>";
-        private const string StorageAccountName = "<fill>";
-        private const string StorageAccountKey = "<fill>";
+        private static string EventHubConnectionString = Environment.GetEnvironmentVariable("EventHubsConnection");
+        private static string EventHubName = "trillsample";
+        private static string StorageContainerName = "trillsample";
 
-        internal static readonly string StorageConnectionString =
-            $"DefaultEndpointsProtocol=https;AccountName={StorageAccountName};AccountKey={StorageAccountKey}";
+        internal static readonly string StorageConnectionString = Environment.GetEnvironmentVariable("AzureWebJobsStorage");
 
         public static void Main(string[] args)
         {

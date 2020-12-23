@@ -1,0 +1,21 @@
+{
+  "version": "2.0",
+  "logging": {
+    "logLevel": {
+      "default": "Warning",
+      "Function.OrchestratorFunction": "Information",
+      "Function.PullAndProcess": "Information"
+    },
+    "applicationInsights": {
+      "samplingSettings": {
+        "isEnabled": true,
+        "excludedTypes": "Request"
+      }
+    }
+  },
+  "extensions": {
+    "durableTask": {
+      "hubName": "trillsample"
+    }
+  }
+}

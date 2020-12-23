@@ -11,8 +11,8 @@ namespace EventHubSender
 {
     public sealed class Program
     {
-        private const string EventHubConnectionString = "<fill>";
-        private const string EventHubName = "<fill>";
+        private static string EventHubConnectionString = Environment.GetEnvironmentVariable("EventHubsConnection");
+        private static string EventHubName = "trillsample";
 
         private static EventHubClient eventHubClient;
 
@@ -30,7 +30,7 @@ namespace EventHubSender
 
             eventHubClient = EventHubClient.CreateFromConnectionString(connectionStringBuilder.ToString());
 
-            await SendMessagesToEventHub(100);
+            await SendMessagesToEventHub();
 
             await eventHubClient.CloseAsync();
 
@@ -39,16 +39,19 @@ namespace EventHubSender
         }
 
         // Creates an Event Hub client and sends 100 messages to the event hub.
-        private static async Task SendMessagesToEventHub(int numMessagesToSend)
+        private static async Task SendMessagesToEventHub()
         {
             var proc = System.Diagnostics.Process.GetCurrentProcess();
 
             int messageCount = 0;
+            long clock = DateTime.UtcNow.Ticks;
+
             while (true)
             {
                 try
                 {
-                    var message = StreamEvent.CreateStart(DateTime.UtcNow.Ticks, proc.WorkingSet64);
+                    clock = Math.Max(clock + 1, DateTime.UtcNow.Ticks);
+                    var message = StreamEvent.CreateStart(clock, proc.WorkingSet64);
                     Console.WriteLine($"Sending message #{++messageCount}: {message}");
                     await eventHubClient.SendAsync(new EventData(BinarySerializer.Serialize(message)), "default");
                 }
@@ -56,7 +59,7 @@ namespace EventHubSender
                 {
                     Console.WriteLine($"{DateTime.Now} > Exception: {exception.Message}");
                 }
-                await Task.Delay(1000);
+                // await Task.Delay(1000);
             }
         }
     }
